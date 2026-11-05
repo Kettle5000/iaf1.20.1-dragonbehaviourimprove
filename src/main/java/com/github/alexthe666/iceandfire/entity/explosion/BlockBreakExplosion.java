@@ -1,5 +1,6 @@
 package com.github.alexthe666.iceandfire.entity.explosion;
 
+import com.github.alexthe666.iceandfire.compat.EnhancedVisualsCompat;
 import com.github.alexthe666.iceandfire.compat.ModCompatList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -134,7 +135,7 @@ public class BlockBreakExplosion extends Explosion {
         ForgeEventFactory.onExplosionDetonate(this.worldObj, this, list, f3);
         Vec3 explosionPos = new Vec3(this.explosionX, this.explosionY, this.explosionZ);
         if (ModCompatList.isEVon) {
-        	EnhancedVisuals.EVENTS.explosion(this, list);
+            EnhancedVisualsCompat.explosion(this, list);
         }
         for (Entity entity : list) {
             Entity controllingPassenger = this.exploder == null ? null : this.exploder.getControllingPassenger();

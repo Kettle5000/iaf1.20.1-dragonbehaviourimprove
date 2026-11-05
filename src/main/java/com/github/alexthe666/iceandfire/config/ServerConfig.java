@@ -194,7 +194,7 @@ public class ServerConfig {
         this.dragonDropSkull = buildBoolean(builder, "Dragons Drop Skull", "all", true, "True if dragons can drop their skull on death.");
         this.dragonDropHeart = buildBoolean(builder, "Dragons Drop Heart", "all", true, "True if dragons can drop their heart on death.");
         this.dragonDropBlood = buildBoolean(builder, "Dragons Drop Blood", "all", true, "True if dragons can drop their blood on death.");
-        this.explosiveDragonBreath = buildBoolean(builder, "Explosive Dragon Breath", "all", false, "True if dragons fire/ice charges create secondary explosions that launch blocks everywhere. Turn this to true if you like unfair explosions. Or lag.");
+        this.explosiveDragonBreath = buildBoolean(builder, "Explosive Dragon Breath", "all", false, "Only affects dragon charges (the fireball-style shots from fire, ice and lightning dragons), not the breath stream. When dragon griefing is allowed, charges always break the blocks near where they hit. If true, some blocks on the outer edge of the blast are also launched into the air as falling blocks. If false, those edge blocks are only scorched, frozen or zapped.");
         this.dragonTargetSearchLength = buildInt(builder, "Dragon Target Search Length", "all", 128, 1, 10000, "How many blocks away can dragons spot potential prey. Note that increasing this could cause lag.");
         this.dragonWanderFromHomeDistance = buildInt(builder, "Dragon Wander From Home Distance", "all", 40, 1, 10000, "How many blocks away can dragons wander from their defined \"home\" position.");
         this.dragonHungerTickRate = buildInt(builder, "Dragon Hunger Tick Rate", "all", 3000, 1, 10000, "Every interval of this number in ticks, dragon hunger decreases.");

@@ -5,7 +5,8 @@ import java.util.List;
 
 public final class IafExplosionRays {
     // Each entry is a primitive direction (dx, dy, dz) with gcd = 1
-    // and dx²+dy²+dz² ≤ 36 (radius 6)
+    // and dx²+dy²+dz² ≤ 25 (radius 5). Scaling these covers every block within radius 5,
+    // which is the largest explosion that uses them (stage 5 charge).
     public static final int[][] RAYS;
 
     static {
@@ -26,7 +27,6 @@ public final class IafExplosionRays {
         for (int i = 0; i < list.size(); i++) {
             RAYS[i] = list.get(i);
         }
-        // For r=6 this gives 874 rays (still way fewer than Minecraft’s 1352)
     }
 
     private static int gcd(int a, int b) {

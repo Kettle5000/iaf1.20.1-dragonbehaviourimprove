@@ -150,6 +150,8 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
     public float prevFireBreathProgress;
     public int fireStopTicks;
     public int flyTicks;
+    /** Last tick breath triggered Enhanced Visuals; see BreathExplosion. Not saved. */
+    public int lastBreathVisualsTick = Integer.MIN_VALUE / 2;
     public float modelDeadProgress;
     public float prevModelDeadProgress;
     public float ridingProgress;

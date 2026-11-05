@@ -148,7 +148,8 @@ dependencies {
     implementation fg.deobf("curse.maven:citadel-331936:5075402")
     compileOnly fg.deobf("curse.maven:defiled-lands-reforged-1490680:8131329")
     implementation fg.deobf("curse.maven:curios-309927:6418456")
-    implementation fg.deobf("curse.maven:enhancedvisuals-255389:9080707")
+    // Optional: only touched through compat/EnhancedVisualsCompat when the mod is loaded.
+    compileOnly fg.deobf("curse.maven:enhancedvisuals-255389:9080707")
 
     compileOnly "io.github.llamalad7:mixinextras-common:0.3.6"
     annotationProcessor "io.github.llamalad7:mixinextras-common:0.3.6"

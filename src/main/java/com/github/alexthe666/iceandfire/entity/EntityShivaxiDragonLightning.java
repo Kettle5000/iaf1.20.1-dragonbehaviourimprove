@@ -10,7 +10,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.projectile.Fireball;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -26,7 +26,7 @@ import javax.annotation.Nullable;
 /** High-speed explosive lightning projectile used only by the Shivaxi Dragon. */
 public class EntityShivaxiDragonLightning extends EntityDragonLightningCharge {
 
-    public EntityShivaxiDragonLightning(EntityType<? extends Fireball> type, Level level) {
+    public EntityShivaxiDragonLightning(EntityType<? extends Projectile> type, Level level) {
         super(type, level);
     }
 
@@ -34,7 +34,7 @@ public class EntityShivaxiDragonLightning extends EntityDragonLightningCharge {
         this(IafEntityRegistry.SHIVAXI_DRAGON_LIGHTNING.get(), level);
     }
 
-    public EntityShivaxiDragonLightning(EntityType<? extends Fireball> type, Level level, EntityDragonBase shooter,
+    public EntityShivaxiDragonLightning(EntityType<? extends Projectile> type, Level level, EntityDragonBase shooter,
                                         double accelX, double accelY, double accelZ) {
         super(type, level, shooter, accelX, accelY, accelZ);
         double length = Math.sqrt(accelX * accelX + accelY * accelY + accelZ * accelZ);

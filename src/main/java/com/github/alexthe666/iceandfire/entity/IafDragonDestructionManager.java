@@ -56,15 +56,26 @@ public class IafDragonDestructionManager {
             return;
         }
 
-        BreathExplosion explosion = new BreathExplosion(dragon.level(), dragon, center.getX(), center.getY(), center.getZ(), Math.max(1, dragon.getDragonStage() - 2));
+        // Same reach as before the rework: small dragons hit a 3x3x3 area, stage 4/5 a radius of 2/3.
+        final int blockRadius = Math.max(1, dragon.getDragonStage() - 2);
+        final double damageRadius = dragon.getDragonStage() <= 3 ? 3.5D : 2.5D + (blockRadius + 0.5D) * 1.2D;
+
+        // Dragon forges light whether or not griefing is on. Their input block is far too hard to
+        // ever be picked by the breath, so look for it directly.
+        BlockPos.betweenClosedStream(center.offset(-blockRadius, -blockRadius, -blockRadius),
+                center.offset(blockRadius, blockRadius, blockRadius)).forEach(position -> {
+            if (level.getBlockEntity(position) instanceof TileEntityDragonforgeInput forge) {
+                forge.onHitWithFlame(forgeType);
+            }
+        });
+
+        BreathExplosion explosion = new BreathExplosion(level, dragon, center.getX(), center.getY(), center.getZ(), blockRadius, damageRadius);
         explosion.explode();
         if (ForgeEventFactory.getMobGriefingEvent(level, dragon) && DragonUtils.canGrief(dragon)) {
-        	explosion.blocks.forEach(position -> {
-            	if (level.getBlockEntity(position) instanceof TileEntityDragonforgeInput forge) {
-                    forge.onHitWithFlame(forgeType);
-                    return;
+            explosion.blocks.forEach(position -> {
+                if (!(level.getBlockEntity(position) instanceof TileEntityDragonforgeInput)) {
+                    attackBlock(level, dragon, position);
                 }
-            	attackBlock(level, dragon, position);
             });
         }
         DamageSource damageSource = getDamageSource(dragon);
@@ -84,7 +95,6 @@ public class IafDragonDestructionManager {
 				}
 			}
 		});
-		explosion.finalizeExplosion(true); //this currently does nothing but just in case it does in the future
 	}
 
     /**
@@ -166,8 +176,9 @@ public class IafDragonDestructionManager {
         }
         boolean canBreakBlocks = DragonUtils.canGrief(dragon) && ForgeEventFactory.getMobGriefingEvent(level, dragon);
         int size = Math.max(2, dragon.getDragonStage());
-        BlockLaunchExplosion explosion = new BlockLaunchExplosion(level, dragon, center.getX(), center.getY(), center.getZ(), size);
-    	explosion.explode(); //blocks list and entity lists are created here
+        BlockLaunchExplosion explosion = new BlockLaunchExplosion(level, dragon, center.getX(), center.getY(), center.getZ(), size)
+                .setLaunchBlocks(IafConfig.explosiveDragonBreath);
+        explosion.explode(); // block and entity lists are created here
         if (canBreakBlocks) {
         	explosion.finalizeExplosion(true);
         }
@@ -186,17 +197,19 @@ public class IafDragonDestructionManager {
 
         final float stageDamage = Math.max(1, dragon.getDragonStage()) * 6F;
         DamageSource damageSource = getDamageSource(dragon);
-        for (Entity entity : explosion.entities ) {
-        	if (entity instanceof LivingEntity target) {
-        		if (!dragon.isAlliedTo(target) && !dragon.is(target)) {
-        			double distance = entity.distanceToSqr(center.getCenter());
-        			if (distance <= size * size) {
-        				if (target.hurt(damageSource, stageDamage - (float)distance)) {
-                            applyDragonEffect(target, dragon.dragonType, statusDuration, dragon, stageDamage);
-                        }
-        			}
+        final Vec3 hitCenter = Vec3.atCenterOf(center);
+        for (Entity entity : explosion.entities) {
+            if (entity instanceof LivingEntity target && !dragon.isAlliedTo(target) && !dragon.is(target)
+                    && dragon.hasLineOfSight(target)) {
+                // Linear falloff with real distance (not squared), never below 1.
+                double distance = Math.sqrt(target.distanceToSqr(hitCenter));
+                if (distance <= size) {
+                    float damage = Math.max(1.0F, stageDamage - (float) distance);
+                    if (target.hurt(damageSource, damage)) {
+                        applyDragonEffect(target, dragon.dragonType, statusDuration, dragon, damage);
+                    }
                 }
-        	}
+            }
         }
     }
 

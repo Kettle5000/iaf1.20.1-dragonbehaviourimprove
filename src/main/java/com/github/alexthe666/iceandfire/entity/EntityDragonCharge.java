@@ -5,6 +5,10 @@ import com.github.alexthe666.iceandfire.entity.util.IDragonProjectile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.DoubleTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.world.damagesource.DamageSource;
@@ -27,6 +31,9 @@ import org.jetbrains.annotations.NotNull;
 import javax.annotation.Nullable;
 
 public abstract class EntityDragonCharge extends Projectile implements IDragonProjectile {
+	/** Same drag vanilla fireballs use; without it the charge accelerates forever. */
+	private static final double INERTIA = 0.95D;
+	private static final double WATER_INERTIA = 0.8D;
 	public double xPower;
 	public double yPower;
 	public double zPower;
@@ -73,7 +80,14 @@ public abstract class EntityDragonCharge extends Projectile implements IDragonPr
             double d0 = this.getX() + vector3d.x;
             double d1 = this.getY() + vector3d.y;
             double d2 = this.getZ() + vector3d.z;
-            this.setDeltaMovement(vector3d.add(this.xPower, this.yPower, this.zPower));
+            double inertia = INERTIA;
+            if (this.isInWater()) {
+                for (int i = 0; i < 4; ++i) {
+                    this.level().addParticle(ParticleTypes.BUBBLE, this.getX() - vector3d.x * 0.25D, this.getY() - vector3d.y * 0.25D, this.getZ() - vector3d.z * 0.25D, vector3d.x, vector3d.y, vector3d.z);
+                }
+                inertia = WATER_INERTIA;
+            }
+            this.setDeltaMovement(vector3d.add(this.xPower, this.yPower, this.zPower).scale(inertia));
             this.level().addParticle(this.getTrailParticle(), this.getX(), this.getY() + 0.5D, this.getZ(), 0.0D, 0.0D, 0.0D);
             this.setPos(d0, d1, d2);
         } else {
@@ -201,4 +215,27 @@ public abstract class EntityDragonCharge extends Projectile implements IDragonPr
     @Override
 	protected void defineSynchedData() {
 	}
+
+    @Override
+    public void addAdditionalSaveData(@NotNull CompoundTag compound) {
+        super.addAdditionalSaveData(compound);
+        ListTag power = new ListTag();
+        power.add(DoubleTag.valueOf(this.xPower));
+        power.add(DoubleTag.valueOf(this.yPower));
+        power.add(DoubleTag.valueOf(this.zPower));
+        compound.put("power", power);
+    }
+
+    @Override
+    public void readAdditionalSaveData(@NotNull CompoundTag compound) {
+        super.readAdditionalSaveData(compound);
+        if (compound.contains("power", Tag.TAG_LIST)) {
+            ListTag power = compound.getList("power", Tag.TAG_DOUBLE);
+            if (power.size() == 3) {
+                this.xPower = power.getDouble(0);
+                this.yPower = power.getDouble(1);
+                this.zPower = power.getDouble(2);
+            }
+        }
+    }
 }
