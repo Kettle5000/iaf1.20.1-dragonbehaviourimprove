@@ -25,7 +25,6 @@ import com.github.alexthe666.iceandfire.item.ItemSummoningCrystal;
 import com.github.alexthe666.iceandfire.message.MessageDragonSetBurnBlock;
 import com.github.alexthe666.iceandfire.message.MessageStartRidingMob;
 import com.github.alexthe666.iceandfire.misc.IafSoundRegistry;
-import com.github.alexthe666.iceandfire.pathfinding.DragonFlyingPathNavigation;
 import com.github.alexthe666.iceandfire.pathfinding.raycoms.AdvancedPathNavigate;
 import com.github.alexthe666.iceandfire.pathfinding.raycoms.IPassabilityNavigator;
 import com.github.alexthe666.iceandfire.pathfinding.raycoms.PathingStuckHandler;
@@ -62,8 +61,10 @@ import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.control.MoveControl;
 import net.minecraft.world.entity.ai.goal.SitWhenOrderedToGoal;
 import net.minecraft.world.entity.ai.goal.TemptGoal;
+import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.OwnerHurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.OwnerHurtTargetGoal;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
@@ -316,13 +317,13 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
         this.goalSelector.addGoal(3, new DragonAIAttackMelee(this, 1.5D, false));
         this.goalSelector.addGoal(4, new DragonAIEscort(this, 1.0D));
         this.goalSelector.addGoal(6, new TemptGoal(this, 1.0D, Ingredient.of(IafItemTags.TEMPT_DRAGON), false));
-        //this.goalSelector.addGoal(7, new DragonAIAirTarget(this));
-        this.goalSelector.addGoal(7, new DragonAIWander(this, 1.0D));
-        this.goalSelector.addGoal(8, new DragonAIWatchClosest(this, LivingEntity.class, 6.0F));
+        this.goalSelector.addGoal(7, new DragonAIAirTarget(this));
+        this.goalSelector.addGoal(8, new DragonAIWander(this, 1.0D));
+        this.goalSelector.addGoal(9, new DragonAIWatchClosest(this, LivingEntity.class, 6.0F));
         this.goalSelector.addGoal(9, new DragonAILookIdle(this));
         this.targetSelector.addGoal(1, new OwnerHurtTargetGoal(this));
         this.targetSelector.addGoal(2, new OwnerHurtByTargetGoal(this));
-        this.targetSelector.addGoal(3, new DragonAIHurtByTarget(this));
+        this.targetSelector.addGoal(3, new HurtByTargetGoal(this));
         this.targetSelector.addGoal(4, new DragonAITargetItems<>(this, 60, false, false, true));
         this.targetSelector.addGoal(5, new DragonAITargetNonTamed<>(this, LivingEntity.class, false, (Predicate<LivingEntity>) entity -> {
             if (entity instanceof Player player) {
@@ -445,7 +446,7 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
                 this.breathFireAtPos(burningTarget);
                 this.setBreathingFire(true);
             } else {
-                if (!level().isClientSide()) {
+                if (!level().isClientSide) {
                     IceAndFire.sendMSGToAll(new MessageDragonSetBurnBlock(this.getId(), true, burningTarget));
                 }
                 burningTarget = null;
@@ -489,10 +490,10 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
             this.setFlying(false);
             this.setHovering(false);
         } else if (navigatorType == 1) {
-            // I have reworked this entirely, movecontrol here is the same as in the original mod since it didnt need any changes but small optimizations
-            // almost all logic regarding flying around is handled inside the pathnavigator class here
-            this.moveControl = new IafDragonFlightManager.DragonFlyingMoveControl(this);  // this was changed
-            this.navigation = new DragonFlyingPathNavigation(this, this.level());
+            // AI飞行：移动完全由flyAround()/flyTowardsTarget()驱动，
+            // 飞行期间导航每tick被stop()，vanilla MoveControl保持WAIT不产生位移
+            this.moveControl = new MoveControl(this);
+            this.navigation = createNavigator(level(), AdvancedPathNavigate.MovementType.FLYING);
             this.navigatorType = 1;
         } else {
             this.moveControl = new IafDragonFlightManager.PlayerFlightMoveHelper(this);
@@ -534,7 +535,7 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
     }
 
     public void openInventory(Player player) {
-        if (!this.level().isClientSide())
+        if (!this.level().isClientSide)
             NetworkHooks.openScreen((ServerPlayer) player, getMenuProvider());
         IceAndFire.PROXY.setReferencedMob(this);
     }
@@ -559,7 +560,7 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
                 double d2 = this.random.nextGaussian() * 0.02D;
                 double d0 = this.random.nextGaussian() * 0.02D;
                 double d1 = this.random.nextGaussian() * 0.02D;
-                if (level().isClientSide()) {
+                if (level().isClientSide) {
                     this.level().addParticle(ParticleTypes.CLOUD, this.getX() + this.random.nextFloat() * this.getBbWidth() * 2.0F - this.getBbWidth(), this.getY() + this.random.nextFloat() * this.getBbHeight(), this.getZ() + this.random.nextFloat() * this.getBbWidth() * 2.0F - this.getBbWidth(), d2, d0, d1);
                 }
             }
@@ -790,7 +791,7 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
             ListTag nbttaglist = compound.getList("Items", 10);
             this.createInventory();
             for (Tag inbt : nbttaglist) {
-                CompoundTag CompoundNBT = (CompoundTag) inbt;
+                CompoundTag CompoundNBT = (net.minecraft.nbt.CompoundTag) inbt;
                 int j = CompoundNBT.getByte("Slot") & 255;
                 if (j <= 4) {
                     dragonInventory.setItem(j, ItemStack.of(CompoundNBT));
@@ -800,7 +801,7 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
             ListTag nbttaglist = compound.getList("Items", 10);
             this.createInventory();
             for (Tag inbt : nbttaglist) {
-                CompoundTag CompoundNBT = (CompoundTag) inbt;
+                CompoundTag CompoundNBT = (net.minecraft.nbt.CompoundTag) inbt;
                 int j = CompoundNBT.getByte("Slot") & 255;
                 dragonInventory.setItem(j, ItemStack.of(CompoundNBT));
             }
@@ -914,7 +915,7 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
         this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(minimumSpeed + (speedStep * age));
         final double baseValue = minimumArmor + (armorStep * this.getAgeInDays());
         this.getAttribute(Attributes.ARMOR).setBaseValue(baseValue);
-        if (!this.level().isClientSide()) {
+        if (!this.level().isClientSide) {
             this.getAttribute(Attributes.ARMOR).removeModifier(ARMOR_MODIFIER_UUID);
             this.getAttribute(Attributes.ARMOR).addPermanentModifier(new AttributeModifier(ARMOR_MODIFIER_UUID, "Dragon armor bonus", calculateArmorModifier(), AttributeModifier.Operation.ADDITION));
         }
@@ -966,7 +967,7 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
     }
 
     public boolean isModelDead() {
-        if (level().isClientSide()) {
+        if (level().isClientSide) {
             return this.isModelDead = this.entityData.get(MODEL_DEAD);
         }
         return isModelDead;
@@ -1773,11 +1774,10 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
         isOverAir = isOverAirLogic();
         animationManager.updateDragonCommon();
         if (this.isModelDead()) {
-            if (!level().isClientSide() && this.isVehicle()) {
+            if (!level().isClientSide && this.isVehicle()) {
                 this.forceDismountAllRiders();
             }
-            BlockState belowstate =level().getBlockState(this.blockPosition().below());
-            if (!level().isClientSide() && !belowstate.getFluidState().isEmpty() && !(this.getY() < this.level().getMinBuildHeight())) {
+            if (!level().isClientSide && level().isEmptyBlock(BlockPos.containing(this.getBlockX(), this.getBoundingBox().minY, this.getBlockZ())) && this.getY() > -1) {
                 this.move(MoverType.SELF, new Vec3(0, -0.2F, 0));
             }
             this.setBreathingFire(false);
@@ -1791,7 +1791,7 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
                 this.setDragonPitch(Math.max(0, dragonPitch + 5));
             }
         } else {
-            if (level().isClientSide()) {
+            if (level().isClientSide) {
                 animationManager.updateDragonClient();
             } else {
                 serverTickManager.updateDragonServer();
@@ -1799,8 +1799,14 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
             }
         }
         level().getProfiler().pop();
-        //I removed all of this since its now handled on the path navigator instead : Kettle
-        
+        level().getProfiler().push("dragonFlight");
+        // 使用1.12.2 RLC的flyAround飞行导航系统
+        if (!level().isClientSide && (this.isFlying() || this.isHovering()) && !this.isModelDead()) {
+            this.flyAround();
+        }
+        level().getProfiler().pop();
+        level().getProfiler().pop();
+
         // RLC-style stuck handling is performed by DragonServerTickManager so it can
         // play the tail-whack and break terrain on the impact frame instead of instantly digging.
     }
@@ -1850,7 +1856,7 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
 
     public float getRenderSize() {
         final int stage = this.getDragonStage() - 1;
-        final float step = (growth_stages[stage][1] - growth_stages[stage][0]) * 0.04f;
+        final float step = (growth_stages[stage][1] - growth_stages[stage][0]) / 25;
         if (this.getAgeInDays() > 125) {
             return growth_stages[stage][0] + (step * 25);
         }
@@ -1904,7 +1910,7 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
             this.setPos(riding.getX() + extraX, riding.getY() + extraY, riding.getZ() + extraZ);
             if ((this.getControlState() == 1 << 4 || ((Player) riding).isFallFlying()) && !riding.isPassenger()) {
                 this.stopRiding();
-                if (level().isClientSide()) {
+                if (level().isClientSide) {
                     IceAndFire.sendMSGToServer(new MessageStartRidingMob(this.getId(), false, true));
                 }
 
@@ -2988,6 +2994,11 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
     @Override
     public void setTarget(@Nullable LivingEntity target) {
         super.setTarget(target);
+        // 清空旧目标点，下tick由flyAround()/DragonAIAirTarget按距离策略选点
+        // （直接覆写为目标位置会锁死"直扑目标脚底"直到近距离，破坏远距离盘旋）
+        if (target != null) {
+            this.airTarget = null;
+        }
     }
 
     @Override
@@ -3180,7 +3191,7 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
 
     @Override
     public void containerChanged(@NotNull Container invBasic) {
-        if (!this.level().isClientSide()) {
+        if (!this.level().isClientSide) {
             updateAttributes();
         }
     }
@@ -3190,15 +3201,5 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
         if (this.moveControl instanceof IafDragonFlightManager.PlayerFlightMoveHelper)
             return pDeltaMovement;
         return super.handleRelativeFrictionAndCalculateMovement(pDeltaMovement, pFriction);
-    }
-    
-    @Override
-    public void knockback(double strength, double xratio, double zratio) {
-    	int stage = this.getDragonStage();
-    	if (stage < 3) {
-    		super.knockback(strength * (1.0f - (stage * 0.3)), xratio, zratio);
-    	} else {
-    		return;
-    	}
     }
 }

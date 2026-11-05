@@ -14,25 +14,11 @@ import net.minecraft.world.level.pathfinder.NodeEvaluator;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * MoveControl
- * No longer using flyaround method
- * this handle the dragon moving to its air target block position
+ * 龙的MoveControl容器。
+ * AI飞行导航由EntityDragonBase.flyAround()/flyTowardsTarget()全权负责，
+ * 此处仅保留地面移动与玩家骑乘飞行两个MoveControl。
  */
 public class IafDragonFlightManager {
-	
-	public static float approach(float number, float max, float min) {
-        min = Math.abs(min);
-        return number < max ? Mth.clamp(number + min, number, max) : Mth.clamp(number - min, max, number);
-    }
-
-    public static float approachDegrees(float number, float max, float min) {
-        float add = Mth.wrapDegrees(max - number);
-        return approach(number, number + add, min);
-    }
-
-    public static float degreesDifferenceAbs(float f1, float f2) {
-        return Math.abs(Mth.wrapDegrees(f2 - f1));
-    }
 
     protected static class GroundMoveHelper extends MoveControl {
         public GroundMoveHelper(Mob LivingEntityIn) {
@@ -111,69 +97,6 @@ public class IafDragonFlightManager {
             }
         }
 
-    }
-    
-    //Adding this back from the original mod. its needed to control movement when flying.
-    
-    protected static class DragonFlyingMoveControl extends MoveControl {
-
-        private final EntityDragonBase dragon;
-
-        public DragonFlyingMoveControl(EntityDragonBase dragonBase) {
-            super(dragonBase);
-            this.dragon = dragonBase;
-        }
-
-        
-        public void tick() {
-            if (dragon.horizontalCollision) {
-                this.speedModifier = 0.02D;
-                dragon.airTarget = null;
-                return;
-            }
-
-            if (dragon.airTarget == null) {
-                return;
-            }
-            final double dx = dragon.airTarget.getX() - dragon.getX();
-            final double dy = dragon.airTarget.getY() - dragon.getY();
-            final double dz = dragon.airTarget.getZ() - dragon.getZ();
-
-            final double distanceSqr = dx * dx + dy * dy + dz * dz;
-
-            if (distanceSqr < 1.0D) {
-                return;
-            }
-
-            // ----------------------------------------
-            // ROTATION: Slowly face the target (yaw only)
-            // ----------------------------------------
-
-            final float targetYaw = (float) (Mth.atan2(-dx, dz) * Mth.RAD_TO_DEG);
-
-            dragon.setYRot(
-                Mth.approachDegrees(dragon.getYRot(), targetYaw, 10.0F)
-            );
-
-            dragon.yBodyRot = dragon.getYRot();
-
-            // ----------------------------------------
-            // MOVEMENT: Always move toward target
-            // ----------------------------------------
-
-            final double movementSpeed = (0.01D / Math.sqrt(distanceSqr)) + 0.001D;
-            Vec3 delta = dragon.getDeltaMovement().add(
-                    dx * movementSpeed,
-                    dy * movementSpeed,
-                    dz * movementSpeed
-                );
-            double intensity = delta.length();
-            double maxspeed = 0.15 + (dragon.getDragonStage() * 0.05);
-            if (intensity > maxspeed) {
-            	delta = delta.scale(maxspeed/intensity);
-            }
-            dragon.setDeltaMovement(delta);
-        }
     }
 
     protected static class PlayerFlightMoveHelper<T extends Mob & IFlyingMount> extends MoveControl {

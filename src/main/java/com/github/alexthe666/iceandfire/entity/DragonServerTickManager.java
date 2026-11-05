@@ -3,8 +3,6 @@ package com.github.alexthe666.iceandfire.entity;
 import com.github.alexthe666.iceandfire.IafConfig;
 import com.github.alexthe666.iceandfire.entity.explosion.BlockBreakExplosion;
 import com.github.alexthe666.iceandfire.entity.util.DragonUtils;
-
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
@@ -97,7 +95,7 @@ public class DragonServerTickManager {
                         (4F * dragon.getDragonStage()) - 2F);
                 explosion.explode();
                 explosion.finalizeExplosion(true);
-                dragon.playSound(SoundEvents.GENERIC_EXPLODE, 1.0F, 1.0F);
+                dragon.playSound(net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE, 1.0F, 1.0F);
             }
         }
 
@@ -184,7 +182,7 @@ public class DragonServerTickManager {
             dragon.airTarget = null;
             dragon.setFlying(false);
             dragon.setHovering(false);
-            //dragon.setNoGravity(false);
+            dragon.setNoGravity(false);
             dragon.flyTicks = 0;
             dragon.hoverTicks = 0;
 
@@ -218,7 +216,7 @@ public class DragonServerTickManager {
             } else {
                 if (dragon.getControllingPassenger() == null || dragon.getControllingPassenger() instanceof EntityDreadQueen) {
                     if (!dragon.isBeyondHeight()) {
-                        double up = dragon.isInWater() ? 0.12D : 0.00D;
+                        double up = dragon.isInWater() ? 0.12D : 0.08D;
                         if (dragon.isTame()) {
                             // The old +0.08 lift was balanced by 1.12.2 gravity. Modern dragons
                             // disable gravity while hovering, so repeatedly adding it makes a
